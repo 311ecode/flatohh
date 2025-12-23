@@ -1,0 +1,65 @@
+{
+  "name": "flatohh",
+  "version": "1.0.5",
+  "description": "Lightweight utility to deeply flatten and unflatten nested JavaScript objects and arrays using dot and bracket notation",
+  "keywords": [
+    "flatten",
+    "unflatten",
+    "deflatten",
+    "deep-flat",
+    "object",
+    "nested",
+    "dot-notation",
+    "bracket-notation",
+    "typescript",
+    "utility",
+    "form-data",
+    "zero-dependency"
+  ],
+  "homepage": "https://github.com/311ecode/flatohh",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/311ecode/flatohh.git"
+  },
+  "bugs": {
+    "url": "https://github.com/311ecode/flatohh/issues"
+  },
+  "author": "Imre Toth",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "clean": "rm -rf dist coverage",
+    "build": "npm run clean && tsc -p tsconfig.esm.json && tsc -p tsconfig.cjs.json",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build && npm test",
+    "release:patch": "npm run prepublishOnly && npm version patch --no-git-tag-version && npm publish"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^22.7.4",
+    "@vitest/coverage-v8": "^3.2.4",
+    "typescript": "^5.6.2",
+    "vitest": "^3.2.4"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "sideEffects": false,
+  "publishConfig": {
+    "access": "public"
+  }
+}
