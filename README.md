@@ -14,12 +14,14 @@ Transform deeply nested objects into flat, dot-notation key-value pairs (and bac
 - 🗄️ Storing hierarchical data in flat databases
 - 🔄 Converting between different data formats
 - ⚡ **Deep Filtering & Chaining**
+- ✂️ **Deep Pruning (Modifying Inner Arrays)**
 - 🛠️ **Structural Renaming (Hoisting/Nesting)**
 
 ## Quick Start
 
 ```bash
 npm install flatohh
+
 
 ```
 
@@ -41,11 +43,12 @@ const admins = flatChain(data)
   .filter({ 'meta.active': true })
   .value();
 
+
 ```
 
 ## Features
 
-✨ **Simple API** - `flatten`, `deflatten`, `rename`, `flatFilter`, `flatChain`
+✨ **Simple API** - `flatten`, `deflatten`, `rename`, `flatFilter`, `flatModify`, `flatChain`
 
 🔒 **Type-safe** - Full TypeScript support
 
@@ -55,19 +58,23 @@ const admins = flatChain(data)
 
 ⚡ **Zero Dependencies** - Lightweight and fast
 
+✂️ **Deep Pruning** - Modify inner arrays using wildcard `houses[*]` syntax
+
 🛠️ **Structure Shifting** - Move data deeper or pull it up using `rename`
 
-🔍 **Deep Query Engine** - MongoDB-style logic (`$and`, `$or`, `$not`) for arrays
+🔍 **Deep Query Engine** - MongoDB-style logic (`$and`, `$or`, `$not`, `$elemMatch`) for arrays
 
 ## Installation
 
 ```bash
 npm install flatohh
 
+
 ```
 
 ```bash
 yarn add flatohh
+
 
 ```
 
@@ -77,10 +84,11 @@ yarn add flatohh
 
 ```typescript
 // ESM
-import { flatten, deflatten, rename, flatFilter, flatChain } from 'flatohh';
+import { flatten, deflatten, rename, flatFilter, flatModify, flatChain } from 'flatohh';
 
 // CommonJS
-const { flatten, deflatten, rename, flatFilter, flatChain } = require('flatohh');
+const { flatten, deflatten, rename, flatFilter, flatModify, flatChain } = require('flatohh');
+
 
 ```
 
@@ -112,6 +120,7 @@ const flat = flatten(data);
 //   'user.settings.notifications': true
 // }
 
+
 ```
 
 #### With Arrays
@@ -132,6 +141,7 @@ const flat = flatten(data);
 //   'users[1].name': 'Bob'
 // }
 
+
 ```
 
 #### With Custom Prefix
@@ -144,6 +154,7 @@ const flat = flatten(data, 'user');
 //   'user.age': 25
 // }
 
+
 ```
 
 #### From JSON String
@@ -152,6 +163,7 @@ const flat = flatten(data, 'user');
 const jsonStr = '{"name":"Alice","address":{"city":"NYC"}}';
 const flat = flatten(jsonStr);
 // Automatically parses and flattens
+
 
 ```
 
@@ -176,6 +188,7 @@ const nested = deflatten(flat);
 //   address: { city: 'NYC', zip: '10001' }
 // }
 
+
 ```
 
 #### Reconstructing Arrays
@@ -194,6 +207,7 @@ const nested = deflatten(flat);
 //   ]
 // }
 
+
 ```
 
 #### Direct to JSON
@@ -202,6 +216,7 @@ const nested = deflatten(flat);
 const flat = { 'name': 'Alice', 'age': 25 };
 const jsonStr = deflatten.toJson(flat);
 // '{"name":"Alice","age":25}'
+
 
 ```
 
@@ -230,6 +245,7 @@ const result = rename(data, {
 //   meta: { id: 123 },
 //   settings: { theme: 'dark' }
 // }
+
 
 ```
 
@@ -261,6 +277,7 @@ const result = flatFilter(users, {
   ]
 });
 
+
 ```
 
 #### Deep Array Tunneling
@@ -272,6 +289,7 @@ Automatically check deeply nested arrays (e.g., Parent -> Children -> Toys).
 flatFilter(parents, {
   'children.toys.status': 'broken'
 });
+
 
 ```
 
@@ -290,9 +308,70 @@ const complete = flatFilter(users, {
   $not: { 'user.profile': undefined }
 });
 
+
 ```
 
-### 5. Piping (`flatChain`)
+#### Advanced: Correlated Sub-queries (`$elemMatch`)
+
+By default, checks are "Global" (Does the parent have *any* red house and *any* rotten apple?). Use `$elemMatch` to enforce that multiple conditions must be met by the **same** sub-object.
+
+```typescript
+// Delete the village ONLY if it has a house that is BOTH Yellow AND has Rotten Apples
+const safeVillages = flatFilter(villages, {
+  $not: {
+    'houses': {
+      $elemMatch: {
+        'color': 'yellow',
+        'boxes.apples.status': 'rotten'
+      }
+    }
+  }
+});
+
+```
+
+---
+
+### 5. Deep Pruning (`flatModify`)
+
+Modify inner arrays without writing nested loops. Use the `[*]` wildcard to target an array for filtering.
+
+#### Pruning Child Arrays
+
+Remove items from a child array based on deep logic.
+
+```typescript
+const villages = [
+  { name: 'Village A', houses: [{ id: 1, bad: false }, { id: 2, bad: true }] }
+];
+
+// Keep the village, but remove the bad houses inside it
+const cleanVillages = flatModify(villages, {
+  'houses[*]': {
+    $not: { 'bad': true }
+  }
+});
+// Result: Village A remains, but now has only House 1.
+
+```
+
+#### Recursive Pruning
+
+Go deeper! Modify the grandchildren.
+
+```typescript
+// Don't delete the house. Just delete the rotten box INSIDE the house.
+const result = flatModify(villages, {
+  'houses[*].boxes[*]': {
+    $not: { 'apples.status': 'rotten' }
+  }
+});
+
+```
+
+---
+
+### 6. Piping (`flatChain`)
 
 Chain multiple filtering steps together efficiently. Uses **Lazy Execution** to optimize into a single pass.
 
@@ -310,6 +389,7 @@ const result = flatChain(data)
   })
   .value();
 
+
 ```
 
 ---
@@ -322,7 +402,7 @@ Converts a nested object into a flat structure.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
-| `obj` | `object | string` | required | Object to flatten or JSON string |
+| `obj` | `object | string` | required |
 | `prefix` | `string` | `''` | Optional prefix for all keys |
 | `result` | `object` | `{}` | Existing object to mutate (advanced) |
 
@@ -334,7 +414,7 @@ Reconstructs a nested object from a flat structure.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `flatObj` | `object | string` | Flat object or JSON string |
+| `flatObj` | `object | string` |
 
 **Returns:** `Record<string, any>` - Nested object structure
 
@@ -358,9 +438,20 @@ Filters an array of objects using deep dot-notation paths and logical operators.
 | Parameter | Type | Description |
 | --- | --- | --- |
 | `array` | `Array<any>` | The array of objects to filter |
-| `query` | `object` | The filter criteria with dot-paths or `$and`/`$or`/`$not` |
+| `query` | `object` | The filter criteria with dot-paths or `$and`/`$or`/`$not`/`$elemMatch` |
 
 **Returns:** `Array<any>` - A new array containing only items that match the query.
+
+### `flatModify(array, rules)`
+
+Modifies deeply nested arrays in place (returned as new copy).
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `array` | `Array<any>` | The root array |
+| `rules` | `Record<string, Query>` | Map of `path[*]` -> `FilterQuery` |
+
+**Returns:** `Array<any>` - The modified structure.
 
 ### `flatChain(array)`
 
