@@ -1,6 +1,6 @@
 # flatohh
 
-> The "Fletó" of flattening utilities. A lightweight TypeScript utility for deeply flattening, unflattening, and filtering nested JavaScript objects and arrays.
+> The "Fletó" of flattening utilities. A lightweight TypeScript utility for deeply flattening, unflattening, filtering, and restructuring nested JavaScript objects and arrays.
 
 [![npm version](https://img.shields.io/npm/v/flatohh.svg)](https://www.npmjs.com/package/flatohh)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -10,11 +10,11 @@
 Transform deeply nested objects into flat, dot-notation key-value pairs (and back again). Perfect for:
 
 - 🔍 Searching through complex nested structures
-- ⚡ **Deep Filtering & Chaining**
 - 📝 Working with form data and dot-notation paths
 - 🗄️ Storing hierarchical data in flat databases
 - 🔄 Converting between different data formats
-- 📊 Processing API responses with deep nesting
+- ⚡ **Deep Filtering & Chaining**
+- 🛠️ **Structural Renaming (Hoisting/Nesting)**
 
 ## Quick Start
 
@@ -24,14 +24,14 @@ npm install flatohh
 ```
 
 ```typescript
-import { flatten, deflatten, flatChain } from 'flatohh';
+import { flatten, deflatten, flatChain, rename } from 'flatohh';
 
-// 1. Flattening
-const user = { name: "Ferenc", skills: { dancing: true } };
-const flat = flatten(user); 
-// { "name": "Ferenc", "skills.dancing": true }
+// 1. The Classic Flatten
+const ferenc = { name: "Ferenc", attributes: { nickname: "Fletó" } };
+const flat = flatten(ferenc);
+// { "name": "Ferenc", "attributes.nickname": "Fletó" }
 
-// 2. Piping / Filtering
+// 2. The New Power Features (Renaming & Filtering)
 const data = [
   { id: 1, meta: { active: true, role: 'admin' } },
   { id: 2, meta: { active: false, role: 'user' } }
@@ -39,14 +39,13 @@ const data = [
 
 const admins = flatChain(data)
   .filter({ 'meta.active': true })
-  .filter({ 'meta.role': 'admin' })
   .value();
 
 ```
 
 ## Features
 
-✨ **Simple API** - `flatten`, `deflatten`, `flatFilter`, and `flatChain`
+✨ **Simple API** - `flatten`, `deflatten`, `rename`, `flatFilter`, `flatChain`
 
 🔒 **Type-safe** - Full TypeScript support
 
@@ -56,9 +55,9 @@ const admins = flatChain(data)
 
 ⚡ **Zero Dependencies** - Lightweight and fast
 
-🔍 **Deep Query Engine** - MongoDB-style logic (`$and`, `$or`, `$not`) for arrays
+🛠️ **Structure Shifting** - Move data deeper or pull it up using `rename`
 
-⛓️ **Smart Chaining** - Lazy execution piping that optimizes multiple filters into a single pass
+🔍 **Deep Query Engine** - MongoDB-style logic (`$and`, `$or`, `$not`) for arrays
 
 ## Installation
 
@@ -72,25 +71,22 @@ yarn add flatohh
 
 ```
 
-```bash
-pnpm add flatohh
-
-```
-
 ## Usage
 
 ### Importing
 
 ```typescript
 // ESM
-import { flatten, deflatten, flatFilter, flatChain } from 'flatohh';
+import { flatten, deflatten, rename, flatFilter, flatChain } from 'flatohh';
 
 // CommonJS
-const { flatten, deflatten, flatFilter, flatChain } = require('flatohh');
+const { flatten, deflatten, rename, flatFilter, flatChain } = require('flatohh');
 
 ```
 
-### Flatten
+---
+
+### 1. Flatten
 
 Convert nested structures to flat key-value pairs.
 
@@ -159,7 +155,9 @@ const flat = flatten(jsonStr);
 
 ```
 
-### Deflatten
+---
+
+### 2. Deflatten
 
 Reconstruct nested objects from flat structures.
 
@@ -175,10 +173,7 @@ const flat = {
 const nested = deflatten(flat);
 // {
 //   name: 'Alice',
-//   address: {
-//     city: 'NYC',
-//     zip: '10001'
-//   }
+//   address: { city: 'NYC', zip: '10001' }
 // }
 
 ```
@@ -188,16 +183,14 @@ const nested = deflatten(flat);
 ```typescript
 const flat = {
   'items[0].name': 'Apple',
-  'items[0].price': 1.50,
-  'items[1].name': 'Orange',
-  'items[1].price': 2.00
+  'items[1].name': 'Orange'
 };
 
 const nested = deflatten(flat);
 // {
 //   items: [
-//     { name: 'Apple', price: 1.50 },
-//     { name: 'Orange', price: 2.00 }
+//     { name: 'Apple' },
+//     { name: 'Orange' }
 //   ]
 // }
 
@@ -212,11 +205,41 @@ const jsonStr = deflatten.toJson(flat);
 
 ```
 
-### Filter Arrays (`flatFilter`)
+---
 
-Filter arrays of nested objects without flattening them first. Supports dot-notation and logical operators.
+### 3. Rename (Restructuring)
 
-#### Basic Filtering (Implicit AND)
+Structurally transform objects by moving properties to new paths.
+
+```typescript
+const data = {
+  userId: 123,
+  config: { theme: 'dark' }
+};
+
+const result = rename(data, {
+  // Push 'userId' deeper into a 'meta' object
+  'userId': 'meta.id',
+  
+  // Rename 'config' object to 'settings' (moves all children automatically)
+  'config': 'settings'
+});
+
+// Result:
+// {
+//   meta: { id: 123 },
+//   settings: { theme: 'dark' }
+// }
+
+```
+
+---
+
+### 4. Filter Arrays (`flatFilter`)
+
+Filter arrays of nested objects without flattening them first.
+
+#### Basic & Logical Filtering
 
 ```typescript
 const users = [
@@ -230,12 +253,7 @@ const admins = flatFilter(users, {
   'meta.role': 'admin'
 });
 
-```
-
-#### Logical Operators (`$or`, `$not`)
-
-```typescript
-// Keep users who are either admins OR guests
+// Logical Operators
 const result = flatFilter(users, {
   $or: [
     { 'meta.role': 'admin' },
@@ -243,16 +261,11 @@ const result = flatFilter(users, {
   ]
 });
 
-// "Filter Out": Keep users who are NOT inactive
-const activeUsers = flatFilter(users, {
-  $not: { 'meta.active': false }
-});
-
 ```
 
-#### Advanced: Deep Array Tunneling
+#### Deep Array Tunneling
 
-`flatohh` automatically tunnels through arrays. If you have `Parents -> Children -> Toys`:
+Automatically check deeply nested arrays (e.g., Parent -> Children -> Toys).
 
 ```typescript
 // Find parents who have ANY child with a broken toy
@@ -279,9 +292,9 @@ const complete = flatFilter(users, {
 
 ```
 
-### Piping (`flatChain`)
+### 5. Piping (`flatChain`)
 
-Chain multiple filtering steps together efficiently. The chain uses **Lazy Execution**: it combines all your filters into a single pass for maximum performance.
+Chain multiple filtering steps together efficiently. Uses **Lazy Execution** to optimize into a single pass.
 
 ```typescript
 const result = flatChain(data)
@@ -295,11 +308,11 @@ const result = flatChain(data)
       { status: 'pending' }
     ]
   })
-  
-  // Step 3: Execute and get result
   .value();
 
 ```
+
+---
 
 ## API Reference
 
@@ -309,7 +322,7 @@ Converts a nested object into a flat structure.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
-| `obj` | `object | string` | required |
+| `obj` | `object | string` | required | Object to flatten or JSON string |
 | `prefix` | `string` | `''` | Optional prefix for all keys |
 | `result` | `object` | `{}` | Existing object to mutate (advanced) |
 
@@ -321,9 +334,22 @@ Reconstructs a nested object from a flat structure.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `flatObj` | `object | string` |
+| `flatObj` | `object | string` | Flat object or JSON string |
 
 **Returns:** `Record<string, any>` - Nested object structure
+
+### `rename(obj, mapping)`
+
+Structurally transforms the object.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `obj` | `object` | The source object |
+| `mapping` | `Record<string, string>` | Map of `{ oldPath: newPath }` |
+
+**Returns:** `object` - The restructured object.
+
+> **Note:** This acts as a "Move" operation. If moving a property leaves its parent object empty, the parent is automatically removed from the result.
 
 ### `flatFilter(array, query)`
 
