@@ -1,6 +1,6 @@
 # flatohh
 
-> The "Fletó" of flattening utilities. A lightweight TypeScript utility for deeply flattening and unflattening nested JavaScript objects and arrays.
+> The "Fletó" of flattening utilities. A lightweight TypeScript utility for deeply flattening, unflattening, and filtering nested JavaScript objects and arrays.
 
 [![npm version](https://img.shields.io/npm/v/flatohh.svg)](https://www.npmjs.com/package/flatohh)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -10,7 +10,7 @@
 Transform deeply nested objects into flat, dot-notation key-value pairs (and back again). Perfect for:
 
 - 🔍 Searching through complex nested structures
-- ⚡ **Filtering arrays based on deep properties**
+- ⚡ **Deep Filtering & Chaining**
 - 📝 Working with form data and dot-notation paths
 - 🗄️ Storing hierarchical data in flat databases
 - 🔄 Converting between different data formats
@@ -24,38 +24,31 @@ npm install flatohh
 ```
 
 ```typescript
-import { flatten, deflatten, flatFilter } from 'flatohh';
+import { flatten, deflatten, flatChain } from 'flatohh';
 
-// The "Fletó" Example
-const ferenc = {
-  name: "Ferenc",
-  attributes: {
-    nickname: "Fletó",
-    skills: {
-      dancing: true,
-      cooking: false
-    }
-  }
-};
+// 1. Flattening
+const user = { name: "Ferenc", skills: { dancing: true } };
+const flat = flatten(user); 
+// { "name": "Ferenc", "skills.dancing": true }
 
-const flat = flatten(ferenc);
-// {
-//   "name": "Ferenc",
-//   "attributes.nickname": "Fletó",
-//   "attributes.skills.dancing": true,
-//   "attributes.skills.cooking": false
-// }
+// 2. Piping / Filtering
+const data = [
+  { id: 1, meta: { active: true, role: 'admin' } },
+  { id: 2, meta: { active: false, role: 'user' } }
+];
 
-const original = deflatten(flat);
-// Back to the original nested structure!
+const admins = flatChain(data)
+  .filter({ 'meta.active': true })
+  .filter({ 'meta.role': 'admin' })
+  .value();
 
 ```
 
 ## Features
 
-✨ **Simple API** - Just three main functions: `flatten()`, `deflatten()`, and `flatFilter()`
+✨ **Simple API** - `flatten`, `deflatten`, `flatFilter`, and `flatChain`
 
-🔒 **Type-safe** - Full TypeScript support with type declarations
+🔒 **Type-safe** - Full TypeScript support
 
 📦 **Flexible Input** - Accepts objects or JSON strings
 
@@ -63,9 +56,9 @@ const original = deflatten(flat);
 
 ⚡ **Zero Dependencies** - Lightweight and fast
 
-🔍 **Deep Filtering** - MongoDB-style logic (`$and`, `$or`, `$not`) for arrays
+🔍 **Deep Query Engine** - MongoDB-style logic (`$and`, `$or`, `$not`) for arrays
 
-🔄 **Lossless Round-trips** - Perfect reconstruction of original data
+⛓️ **Smart Chaining** - Lazy execution piping that optimizes multiple filters into a single pass
 
 ## Installation
 
@@ -90,10 +83,10 @@ pnpm add flatohh
 
 ```typescript
 // ESM
-import { flatten, deflatten, flatFilter } from 'flatohh';
+import { flatten, deflatten, flatFilter, flatChain } from 'flatohh';
 
 // CommonJS
-const { flatten, deflatten, flatFilter } = require('flatohh');
+const { flatten, deflatten, flatFilter, flatChain } = require('flatohh');
 
 ```
 
@@ -257,19 +250,14 @@ const activeUsers = flatFilter(users, {
 
 ```
 
-#### Complex Nesting
+#### Advanced: Deep Array Tunneling
 
-Combine operators for complex queries.
+`flatohh` automatically tunnels through arrays. If you have `Parents -> Children -> Toys`:
 
 ```typescript
-// Keep users who are NOT (inactive OR banned)
-const safeUsers = flatFilter(users, {
-  $not: {
-    $or: [
-      { 'meta.active': false },
-      { 'meta.status': 'banned' }
-    ]
-  }
+// Find parents who have ANY child with a broken toy
+flatFilter(parents, {
+  'children.toys.status': 'broken'
 });
 
 ```
@@ -288,6 +276,28 @@ const incomplete = flatFilter(users, {
 const complete = flatFilter(users, {
   $not: { 'user.profile': undefined }
 });
+
+```
+
+### Piping (`flatChain`)
+
+Chain multiple filtering steps together efficiently. The chain uses **Lazy Execution**: it combines all your filters into a single pass for maximum performance.
+
+```typescript
+const result = flatChain(data)
+  // Step 1: Filter by deep property
+  .filter({ 'attributes.color': 'red' })
+  
+  // Step 2: Filter by logic
+  .filter({ 
+    $or: [
+      { status: 'active' },
+      { status: 'pending' }
+    ]
+  })
+  
+  // Step 3: Execute and get result
+  .value();
 
 ```
 
@@ -325,6 +335,15 @@ Filters an array of objects using deep dot-notation paths and logical operators.
 | `query` | `object` | The filter criteria with dot-paths or `$and`/`$or`/`$not` |
 
 **Returns:** `Array<any>` - A new array containing only items that match the query.
+
+### `flatChain(array)`
+
+Creates a fluent chain for piping operations.
+
+| Method | Description |
+| --- | --- |
+| `.filter(query)` | Adds a deep filter step to the pipe. |
+| `.value()` | Executes the optimized pipe and returns the result. |
 
 ## License
 
