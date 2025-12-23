@@ -1,6 +1,6 @@
 {
   "name": "flatohh",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Lightweight utility to deeply flatten and unflatten nested JavaScript objects and arrays using dot and bracket notation",
   "keywords": [
     "flatten",
@@ -14,7 +14,10 @@
     "typescript",
     "utility",
     "form-data",
-    "zero-dependency"
+    "zero-dependency",
+    "esm",
+    "cjs",
+    "commonjs"
   ],
   "homepage": "https://github.com/311ecode/flatohh",
   "repository": {
@@ -32,9 +35,14 @@
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
     }
   },
   "files": [
@@ -42,7 +50,7 @@
   ],
   "scripts": {
     "clean": "rm -rf dist coverage",
-    "build": "npm run clean && tsc -p tsconfig.esm.json && tsc -p tsconfig.cjs.json",
+    "build": "tsup src/index.ts --format cjs,esm --dts --clean --target es5 --sourcemap --no-splitting",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
     "prepublishOnly": "npm run build && npm test",
@@ -50,13 +58,15 @@
   },
   "dependencies": {},
   "devDependencies": {
+    "@swc/core": "^1.7.26",
     "@types/node": "^22.7.4",
     "@vitest/coverage-v8": "^3.2.4",
+    "tsup": "^8.3.0",
     "typescript": "^5.6.2",
     "vitest": "^3.2.4"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=7.0.0"
   },
   "sideEffects": false,
   "publishConfig": {

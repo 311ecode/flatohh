@@ -4,6 +4,7 @@
 
 [![npm version](https://img.shields.io/npm/v/flatohh.svg)](https://www.npmjs.com/package/flatohh)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Node.js CI](https://img.shields.io/badge/Node.js-%3E%3D7.0-green)](https://nodejs.org/)
 
 ## Why?
 
@@ -17,11 +18,19 @@ Transform deeply nested objects into flat, dot-notation key-value pairs (and bac
 - ✂️ **Deep Pruning (Modifying Inner Arrays)**
 - 🛠️ **Structural Renaming (Hoisting/Nesting)**
 
+## 📦 Universal Compatibility
+
+`flatohh` is built to work **everywhere** out of the box.
+
+- ✅ **CommonJS (CJS):** Fully supported for Node.js (legacy & modern).
+- ✅ **ES Modules (ESM/MJS):** Native support for modern stack (Vite, Next.js, etc.).
+- ✅ **TypeScript:** First-class citizen. Includes native `.d.ts` type definitions.
+- ✅ **Legacy Support:** Compiles down to ES5, compatible with **Node.js 7+**.
+
 ## Quick Start
 
 ```bash
 npm install flatohh
-
 
 ```
 
@@ -42,7 +51,6 @@ const data = [
 const admins = flatChain(data)
   .filter({ 'meta.active': true })
   .value();
-
 
 ```
 
@@ -69,12 +77,10 @@ const admins = flatChain(data)
 ```bash
 npm install flatohh
 
-
 ```
 
 ```bash
 yarn add flatohh
-
 
 ```
 
@@ -82,13 +88,17 @@ yarn add flatohh
 
 ### Importing
 
+**ES Modules / TypeScript**
+
 ```typescript
-// ESM
-import { flatten, deflatten, rename, flatFilter, flatModify, flatChain } from 'flatohh';
+import { flatten, deflatten } from 'flatohh';
 
-// CommonJS
-const { flatten, deflatten, rename, flatFilter, flatModify, flatChain } = require('flatohh');
+```
 
+**CommonJS (Node.js)**
+
+```javascript
+const { flatten, deflatten } = require('flatohh');
 
 ```
 
@@ -120,7 +130,6 @@ const flat = flatten(data);
 //   'user.settings.notifications': true
 // }
 
-
 ```
 
 #### With Arrays
@@ -141,7 +150,6 @@ const flat = flatten(data);
 //   'users[1].name': 'Bob'
 // }
 
-
 ```
 
 #### With Custom Prefix
@@ -154,7 +162,6 @@ const flat = flatten(data, 'user');
 //   'user.age': 25
 // }
 
-
 ```
 
 #### From JSON String
@@ -163,7 +170,6 @@ const flat = flatten(data, 'user');
 const jsonStr = '{"name":"Alice","address":{"city":"NYC"}}';
 const flat = flatten(jsonStr);
 // Automatically parses and flattens
-
 
 ```
 
@@ -188,7 +194,6 @@ const nested = deflatten(flat);
 //   address: { city: 'NYC', zip: '10001' }
 // }
 
-
 ```
 
 #### Reconstructing Arrays
@@ -207,7 +212,6 @@ const nested = deflatten(flat);
 //   ]
 // }
 
-
 ```
 
 #### Direct to JSON
@@ -216,7 +220,6 @@ const nested = deflatten(flat);
 const flat = { 'name': 'Alice', 'age': 25 };
 const jsonStr = deflatten.toJson(flat);
 // '{"name":"Alice","age":25}'
-
 
 ```
 
@@ -245,7 +248,6 @@ const result = rename(data, {
 //   meta: { id: 123 },
 //   settings: { theme: 'dark' }
 // }
-
 
 ```
 
@@ -277,7 +279,6 @@ const result = flatFilter(users, {
   ]
 });
 
-
 ```
 
 #### Deep Array Tunneling
@@ -289,7 +290,6 @@ Automatically check deeply nested arrays (e.g., Parent -> Children -> Toys).
 flatFilter(parents, {
   'children.toys.status': 'broken'
 });
-
 
 ```
 
@@ -307,7 +307,6 @@ const incomplete = flatFilter(users, {
 const complete = flatFilter(users, {
   $not: { 'user.profile': undefined }
 });
-
 
 ```
 
@@ -388,7 +387,6 @@ const result = flatChain(data)
     ]
   })
   .value();
-
 
 ```
 
