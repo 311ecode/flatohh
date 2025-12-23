@@ -10,6 +10,7 @@
 Transform deeply nested objects into flat, dot-notation key-value pairs (and back again). Perfect for:
 
 - 🔍 Searching through complex nested structures
+- ⚡ **Filtering arrays based on deep properties**
 - 📝 Working with form data and dot-notation paths
 - 🗄️ Storing hierarchical data in flat databases
 - 🔄 Converting between different data formats
@@ -23,7 +24,7 @@ npm install flatohh
 ```
 
 ```typescript
-import { flatten, deflatten } from 'flatohh';
+import { flatten, deflatten, flatFilter } from 'flatohh';
 
 // The "Fletó" Example
 const ferenc = {
@@ -52,7 +53,7 @@ const original = deflatten(flat);
 
 ## Features
 
-✨ **Simple API** - Just two main functions: `flatten()` and `deflatten()`
+✨ **Simple API** - Just three main functions: `flatten()`, `deflatten()`, and `flatFilter()`
 
 🔒 **Type-safe** - Full TypeScript support with type declarations
 
@@ -62,9 +63,9 @@ const original = deflatten(flat);
 
 ⚡ **Zero Dependencies** - Lightweight and fast
 
-🔄 **Lossless Round-trips** - Perfect reconstruction of original data
+🔍 **Deep Filtering** - MongoDB-style logic (`$and`, `$or`, `$not`) for arrays
 
-📚 **ESM & CommonJS** - Works everywhere
+🔄 **Lossless Round-trips** - Perfect reconstruction of original data
 
 ## Installation
 
@@ -89,10 +90,10 @@ pnpm add flatohh
 
 ```typescript
 // ESM
-import { flatten, deflatten } from 'flatohh';
+import { flatten, deflatten, flatFilter } from 'flatohh';
 
 // CommonJS
-const { flatten, deflatten } = require('flatohh');
+const { flatten, deflatten, flatFilter } = require('flatohh');
 
 ```
 
@@ -218,6 +219,78 @@ const jsonStr = deflatten.toJson(flat);
 
 ```
 
+### Filter Arrays (`flatFilter`)
+
+Filter arrays of nested objects without flattening them first. Supports dot-notation and logical operators.
+
+#### Basic Filtering (Implicit AND)
+
+```typescript
+const users = [
+  { id: 1, meta: { active: true, role: 'admin' } },
+  { id: 2, meta: { active: false, role: 'user' } }
+];
+
+// Keep users where active is true AND role is admin
+const admins = flatFilter(users, {
+  'meta.active': true,
+  'meta.role': 'admin'
+});
+
+```
+
+#### Logical Operators (`$or`, `$not`)
+
+```typescript
+// Keep users who are either admins OR guests
+const result = flatFilter(users, {
+  $or: [
+    { 'meta.role': 'admin' },
+    { 'meta.role': 'guest' }
+  ]
+});
+
+// "Filter Out": Keep users who are NOT inactive
+const activeUsers = flatFilter(users, {
+  $not: { 'meta.active': false }
+});
+
+```
+
+#### Complex Nesting
+
+Combine operators for complex queries.
+
+```typescript
+// Keep users who are NOT (inactive OR banned)
+const safeUsers = flatFilter(users, {
+  $not: {
+    $or: [
+      { 'meta.active': false },
+      { 'meta.status': 'banned' }
+    ]
+  }
+});
+
+```
+
+#### Checking for Existence (`undefined`)
+
+Check if a nested key is missing or undefined.
+
+```typescript
+// Find users missing a profile
+const incomplete = flatFilter(users, {
+  'user.profile': undefined
+});
+
+// Find users who HAVE a profile (Not Undefined)
+const complete = flatFilter(users, {
+  $not: { 'user.profile': undefined }
+});
+
+```
+
 ## API Reference
 
 ### `flatten(obj, prefix?, result?)`
@@ -226,13 +299,11 @@ Converts a nested object into a flat structure.
 
 | Parameter | Type | Default | Description |
 | --- | --- | --- | --- |
-| `obj` | `object | string` | required | Object to flatten or JSON string |
+| `obj` | `object | string` | required |
 | `prefix` | `string` | `''` | Optional prefix for all keys |
 | `result` | `object` | `{}` | Existing object to mutate (advanced) |
 
 **Returns:** `Record<string, any>` - Flat object with dot/bracket notation keys
-
-**Throws:** Error if JSON string is invalid
 
 ### `deflatten(flatObj)`
 
@@ -240,21 +311,20 @@ Reconstructs a nested object from a flat structure.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `flatObj` | `object | string` | Flat object or JSON string |
+| `flatObj` | `object | string` |
 
 **Returns:** `Record<string, any>` - Nested object structure
 
-**Throws:** Error if JSON string is invalid
+### `flatFilter(array, query)`
 
-### `deflatten.toJson(flatObj)`
-
-Convenience method to deflatten and return as JSON string.
+Filters an array of objects using deep dot-notation paths and logical operators.
 
 | Parameter | Type | Description |
 | --- | --- | --- |
-| `flatObj` | `object | string` | Flat object or JSON string |
+| `array` | `Array<any>` | The array of objects to filter |
+| `query` | `object` | The filter criteria with dot-paths or `$and`/`$or`/`$not` |
 
-**Returns:** `string` - JSON string of the nested object
+**Returns:** `Array<any>` - A new array containing only items that match the query.
 
 ## License
 
