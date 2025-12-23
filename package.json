@@ -1,6 +1,6 @@
 {
   "name": "flatohh",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "description": "Lightweight utility to deeply flatten and unflatten nested JavaScript objects and arrays using dot and bracket notation",
   "keywords": [
     "flatten",
