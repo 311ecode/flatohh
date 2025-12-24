@@ -7,15 +7,9 @@ import { flatFilter, FilterQuery } from '../filter/filter';
  * Example: { 'houses[*]': { $not: { 'color': 'red' } } }
  */
 export const flatModify = <T>(data: T[], rules: Record<string, FilterQuery>): T[] => {
-  // 1. Create a shallow copy of the array so we can map over it safely
-  // Note: We will clone objects as we modify them to avoid mutating the original
   const result = data.map(item => ({ ...item }));
 
   for (const [path, query] of Object.entries(rules)) {
-    // 2. Parse the path to find the first Array Wildcard [*]
-    // Matches: "houses[*]" or "houses[*].boxes[*]"
-    // Group 1: "houses"
-    // Group 2: ".boxes[*]" (Remainder)
     const match = path.match(/^(.*?)\[\*\](.*)$/);
 
     if (!match) {
@@ -24,43 +18,24 @@ export const flatModify = <T>(data: T[], rules: Record<string, FilterQuery>): T[
 
     const [, arrayPath, remainder] = match;
 
-    // 3. Iterate over the main result set to apply changes
     for (let i = 0; i < result.length; i++) {
       const item = result[i] as any;
-      
-      // Navigate to the array (e.g., item.houses)
-      // We support dot notation for the path leading up to the [*]
       const parts = arrayPath.split('.');
-      let current = item;
-      let targetArray: any[] | undefined;
       let parentOfArray: any = item;
       let keyOfArray: string = parts[parts.length - 1];
 
-      // Walk to the parent of the array
       for (let j = 0; j < parts.length - 1; j++) {
         parentOfArray = parentOfArray[parts[j]];
         if (!parentOfArray) break;
       }
       
-      if (parentOfArray) {
-        targetArray = parentOfArray[keyOfArray];
-      }
+      if (!parentOfArray || !Array.isArray(parentOfArray[keyOfArray])) continue;
+      const targetArray = parentOfArray[keyOfArray];
 
-      // If the target array doesn't exist or isn't an array, skip
-      if (!Array.isArray(targetArray)) continue;
-
-      // 4. ACTION TIME
       if (!remainder || remainder === '') {
-        // Case A: End of chain (e.g., "houses[*]")
-        // -> Apply the Filter Query directly to this array
         parentOfArray[keyOfArray] = flatFilter(targetArray, query);
       } else {
-        // Case B: Nested Chain (e.g., "houses[*].boxes[*]")
-        // -> Recurse! 
-        // We strip the leading dot from remainder: ".boxes[*]" -> "boxes[*]"
         const nextRule = { [remainder.slice(1)]: query };
-        
-        // Recursively modify the inner array
         parentOfArray[keyOfArray] = flatModify(targetArray, nextRule);
       }
     }
@@ -68,3 +43,60 @@ export const flatModify = <T>(data: T[], rules: Record<string, FilterQuery>): T[
 
   return result;
 };
+
+/**
+ * Transforms values at specific paths using a mapper function.
+ * Supports [*] wildcard for arrays.
+ */
+export const flatTransform = <T>(data: T | T[], transforms: Record<string, (val: any) => any>): T | T[] => {
+  const isArray = Array.isArray(data);
+  const items = isArray ? (data as T[]) : [data as T];
+  
+  const result = items.map(item => {
+    const cloned = JSON.parse(JSON.stringify(item));
+    for (const [path, mapper] of Object.entries(transforms)) {
+      applyTransform(cloned, path, mapper);
+    }
+    return cloned;
+  });
+
+  return isArray ? result : result[0];
+};
+
+function applyTransform(obj: any, path: string, mapper: (val: any) => any) {
+  if (!path.includes('[*]')) {
+    const parts = path.split('.');
+    let current = obj;
+    for (let i = 0; i < parts.length - 1; i++) {
+      if (!current[parts[i]]) return;
+      current = current[parts[i]];
+    }
+    const lastKey = parts[parts.length - 1];
+    if (lastKey in current) {
+      current[lastKey] = mapper(current[lastKey]);
+    }
+    return;
+  }
+
+  const match = path.match(/^(.*?)\[\*\](.*)$/);
+  if (!match) return;
+  const [, arrayPath, remainder] = match;
+  
+  const parts = arrayPath.split('.');
+  let current = obj;
+  for (const part of parts) {
+    if (!current[part]) return;
+    current = current[part];
+  }
+
+  if (Array.isArray(current)) {
+    current.forEach(item => {
+      if (!remainder) {
+        // Direct array item transform if path was "tags[*]"
+        // This is complex for primitives, usually used for objects
+      } else {
+        applyTransform(item, remainder.slice(1), mapper);
+      }
+    });
+  }
+}

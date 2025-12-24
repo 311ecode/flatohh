@@ -1,6 +1,6 @@
 {
   "name": "flatohh",
-  "version": "1.0.8",
+  "version": "1.0.12",
   "description": "Lightweight utility to deeply flatten and unflatten nested JavaScript objects and arrays using dot and bracket notation",
   "keywords": [
     "flatten",
@@ -50,7 +50,7 @@
   ],
   "scripts": {
     "clean": "rm -rf dist coverage",
-    "build": "tsup src/index.ts --format cjs,esm --dts --clean --target es5 --sourcemap --no-splitting",
+    "build": "tsup src/index.ts --format cjs,esm --dts --clean --target es5 --sourcemap --no-splitting --minify --treeshake",
     "test": "vitest run --coverage",
     "test:watch": "vitest",
     "prepublishOnly": "npm run build && npm test",

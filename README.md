@@ -1,6 +1,6 @@
 # flatohh
 
-> The "Fletó" of flattening utilities. A lightweight TypeScript utility for deeply flattening, unflattening, filtering, and restructuring nested JavaScript objects and arrays.
+> The "Fletó" of flattening utilities. A lightweight TypeScript utility for deeply flattening, unflattening, filtering, pruning, and restructuring nested JavaScript objects and arrays.
 
 [![npm version](https://img.shields.io/npm/v/flatohh.svg)](https://www.npmjs.com/package/flatohh)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -17,6 +17,7 @@ Transform deeply nested objects into flat, dot-notation key-value pairs (and bac
 - ⚡ **Deep Filtering & Chaining**
 - ✂️ **Deep Pruning (Modifying Inner Arrays)**
 - 🛠️ **Structural Renaming (Hoisting/Nesting)**
+- 🪄 **Deep Transformation & Selection (Pick/Omit)**
 
 ## 📦 Universal Compatibility
 
@@ -35,7 +36,7 @@ npm install flatohh
 ```
 
 ```typescript
-import { flatten, deflatten, flatChain, rename } from 'flatohh';
+import { flatten, deflatten, flatChain, rename, flatTransform, flatPick, flatOmit } from 'flatohh';
 
 // 1. The Classic Flatten
 const ferenc = { name: "Ferenc", attributes: { nickname: "Fletó" } };
@@ -44,19 +45,25 @@ const flat = flatten(ferenc);
 
 // 2. The New Power Features (Renaming & Filtering)
 const data = [
-  { id: 1, meta: { active: true, role: 'admin' } },
-  { id: 2, meta: { active: false, role: 'user' } }
+  { id: 1, meta: { active: true, role: 'admin', sensitive: 'secret' } },
+  { id: 2, meta: { active: false, role: 'user', sensitive: 'hidden' } }
 ];
 
 const admins = flatChain(data)
   .filter({ 'meta.active': true })
   .value();
 
+// 3. Transformation & Selection
+// Apply 10% tax, pick specific fields, and remove sensitive data
+const taxed = flatTransform(data, { 'meta.price': (p) => p * 1.1 });
+const picked = flatPick(taxed, ['id', 'meta.*']);
+const safe = flatOmit(picked, ['meta.sensitive']);
+
 ```
 
 ## Features
 
-✨ **Simple API** - `flatten`, `deflatten`, `rename`, `flatFilter`, `flatModify`, `flatChain`
+✨ **Simple API** - `flatten`, `deflatten`, `rename`, `flatFilter`, `flatModify`, `flatChain`, `flatTransform`, `flatPick`, `flatOmit`
 
 🔒 **Type-safe** - Full TypeScript support
 
@@ -91,14 +98,14 @@ yarn add flatohh
 **ES Modules / TypeScript**
 
 ```typescript
-import { flatten, deflatten } from 'flatohh';
+import { flatten, deflatten, flatTransform, flatPick, flatOmit } from 'flatohh';
 
 ```
 
 **CommonJS (Node.js)**
 
 ```javascript
-const { flatten, deflatten } = require('flatohh');
+const { flatten, deflatten, flatTransform, flatPick, flatOmit } = require('flatohh');
 
 ```
 
@@ -392,6 +399,60 @@ const result = flatChain(data)
 
 ---
 
+### 7. Deep Transformation (`flatTransform`)
+
+Modify values at specific deep paths (including within arrays) using mapper functions.
+
+```typescript
+const products = [
+  { id: 1, info: { price: 100, name: 'Apple' } },
+  { id: 2, info: { price: 200, name: 'Banana' } }
+];
+
+// Apply 10% tax to all prices across nested structures
+const taxed = flatTransform(products, {
+  'info.price': (p) => p * 1.1
+});
+// Result: Prices are now 110 and 220
+
+```
+
+#### Transforming Nested Arrays
+
+Use the `[*]` wildcard to apply transformations to every item in a nested list.
+
+```typescript
+flatTransform(orders, {
+  'items[*].qty': (q) => q * 2 // Double the quantity of all items
+});
+
+```
+
+---
+
+### 8. Selection (`flatPick` / `flatOmit`)
+
+Surgical property selection using dot-notation. This is safer than standard picking because it understands nested structures and arrays.
+
+```typescript
+const user = {
+  id: 1,
+  profile: { name: 'Alice', age: 30, internalId: 'SECRET' },
+  tags: ['admin', 'verified']
+};
+
+// Pick only what you need (Whitelist)
+const publicUser = flatPick(user, ['id', 'profile.name', 'tags[*]']);
+// -> { id: 1, profile: { name: 'Alice' }, tags: [...] }
+
+// Omit sensitive fields (Blacklist)
+const safeUser = flatOmit(user, ['profile.internalId', 'profile.age']);
+// -> { id: 1, profile: { name: 'Alice' }, ... }
+
+```
+
+---
+
 ## API Reference
 
 ### `flatten(obj, prefix?, result?)`
@@ -459,6 +520,35 @@ Creates a fluent chain for piping operations.
 | --- | --- |
 | `.filter(query)` | Adds a deep filter step to the pipe. |
 | `.value()` | Executes the optimized pipe and returns the result. |
+
+### `flatTransform(data, mapping)`
+
+Transforms values at specific paths.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `data` | `object | Array` |
+| `mapping` | `Record<string, Function>` | Map of `path` -> `MapperFunction(value) => newValue` |
+
+**Returns:** `object | Array` - The transformed data (structure preserved).
+
+### `flatPick(obj, paths)`
+
+Returns a new object containing **only** the specified paths.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `obj` | `object` | Source object |
+| `paths` | `string[]` | Array of dot-notation paths to keep. Supports `[*]` |
+
+### `flatOmit(obj, paths)`
+
+Returns a new object **excluding** the specified paths.
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `obj` | `object` | Source object |
+| `paths` | `string[]` | Array of dot-notation paths to remove. Supports `[*]` |
 
 ## License
 
